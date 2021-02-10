@@ -2982,6 +2982,7 @@ dependencies = [
  "failure_derive",
  "log",
  "near-primitives",
+ "thiserror",
 ]
 
 [[package]]
@@ -3043,6 +3044,7 @@ dependencies = [
  "strum",
  "sysinfo",
  "testlib",
+ "thiserror",
 ]
 
 [[package]]
@@ -3602,6 +3604,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "testlib",
+ "thiserror",
  "tracing",
  "tracing-subscriber",
 ]
