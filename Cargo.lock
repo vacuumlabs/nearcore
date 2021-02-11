@@ -3216,6 +3216,7 @@ dependencies = [
  "near-client-primitives",
  "near-metrics",
  "near-primitives",
+ "near-primitives-core",
  "serde",
  "serde_json",
  "thiserror",
@@ -3381,6 +3382,7 @@ dependencies = [
  "lazy_static",
  "near-chain-configs",
  "near-client",
+ "near-client-primitives",
  "near-crypto",
  "near-network",
  "near-primitives",
@@ -3654,6 +3656,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "testlib",
+ "thiserror",
 ]
 
 [[package]]
