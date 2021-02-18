@@ -71,6 +71,8 @@ impl ExtCostsGenerator {
         self.extract(blake2b_10b_10k, blake2b_base);
         self.extract(blake2b_10kib_10k, blake2b_byte);
 
+        self.extract(ecrecover_10k, ecrecover_base);
+
         // TODO: Redo storage costs once we have counting of nodes and we have size peek.
         self.extract(storage_write_10b_key_10b_value_1k, storage_write_base);
         self.extract(storage_write_10kib_key_10b_value_1k, storage_write_key_byte);
