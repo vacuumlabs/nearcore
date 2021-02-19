@@ -181,6 +181,8 @@ pub enum HostError {
     ContractSizeExceeded { size: u64, limit: u64 },
     /// The host function was deprecated.
     Deprecated { method_name: String },
+    /// Invalid ECDSA signature.
+    InvalidECDSASignature,
 }
 
 /// Errors specifically from native EVM.
@@ -445,6 +447,7 @@ impl std::fmt::Display for HostError {
             ReturnedValueLengthExceeded { length, limit } => write!(f, "The length of a returned value {} exceeds the limit {}", length, limit),
             ContractSizeExceeded { size, limit } => write!(f, "The size of a contract code in DeployContract action {} exceeds the limit {}", size, limit),
             Deprecated {method_name}=> write!(f, "Attempted to call deprecated host function {}", method_name),
+            InvalidECDSASignature => write!(f, "Invalid ECDSA signature"),
         }
     }
 }
