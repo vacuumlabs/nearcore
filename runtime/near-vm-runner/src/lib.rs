@@ -9,10 +9,13 @@ mod wasmer_runner;
 mod wasmtime_runner;
 pub use near_vm_errors::VMError;
 pub use runner::compile_module;
+pub use runner::prepare_vm_calls;
 pub use runner::run;
+pub use runner::run_prepared;
 pub use runner::run_vm;
 pub use runner::run_vm_profiled;
 pub use runner::with_vm_variants;
+pub use runner::{ContractCallPrepareRequest, ContractCallPrepareResult, ContractCallContext};
 
 #[cfg(feature = "costs_counting")]
 pub use near_vm_logic::EXT_COSTS_COUNTER;

@@ -3518,6 +3518,7 @@ dependencies = [
  "near-vm-logic",
  "parity-wasm",
  "pwasm-utils",
+ "threadpool",
  "wabt",
  "wasmer-runtime-core-near",
  "wasmer-runtime-near",
