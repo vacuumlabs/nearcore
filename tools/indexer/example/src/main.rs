@@ -11,6 +11,7 @@ mod configs;
 
 async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>) {
     while let Some(streamer_message) = stream.recv().await {
+        /*
         // TODO: handle data as you need
         // Example of `block` with all the data
         //
@@ -238,15 +239,41 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
         //         },
         //     ]
         // }
+        */
+        /*
+        pub struct StreamerMessage {
+            pub block: views::BlockView,
+            pub chunks: Vec<IndexerChunkView>,
+            pub state_changes: views::StateChangesView}
+        */
+
+        // Test Logging
+        let log_message = if streamer_message.chunks.len() > 0 {
+            let chunk = &streamer_message.chunks[0];
+            if chunk.receipt_execution_outcomes.len() > 0 {
+                    let mut outcome = Vec::new();
+                    outcome.push(vec!("Test Log Message (inside Indexer)".to_string()));
+                    for execution_outcome_with_receipt in chunk.receipt_execution_outcomes.iter() {
+                        outcome.push(execution_outcome_with_receipt.execution_outcome.outcome.logs.clone());
+                    }
+                    outcome
+                } else {
+                    vec!(vec!("Nothing to log (receipt_execution_outcomes.len() !>0".to_string()))
+                }
+        } else {
+            vec!(vec!("Nothing to log. chunks.len() !> 0".to_string()))
+        };
+
         info!(
             target: "indexer_example",
-            "#{} {} Chunks: {}, Transactions: {}, Receipts: {}, ExecutionOutcomes: {}",
+            "#{} {} Chunks: {}, Transactions: {}, Receipts: {}, ExecutionOutcomes: {}, Logs: {:?}",
             streamer_message.block.header.height,
             streamer_message.block.header.hash,
             streamer_message.chunks.len(),
             streamer_message.chunks.iter().map(|chunk| chunk.transactions.len()).sum::<usize>(),
             streamer_message.chunks.iter().map(|chunk| chunk.receipts.len()).sum::<usize>(),
             streamer_message.chunks.iter().map(|chunk| chunk.receipt_execution_outcomes.len()).sum::<usize>(),
+            log_message
         );
     }
 }
@@ -278,6 +305,16 @@ fn main() {
                 })
                 .unwrap();
         }
-        SubCommand::Init(config) => near_indexer::indexer_init_configs(&home_dir, config.into()),
+        SubCommand::Init(config) => near_indexer::init_configs(
+            &home_dir,
+            config.chain_id.as_ref().map(AsRef::as_ref),
+            config.account_id.as_ref().map(AsRef::as_ref),
+            config.test_seed.as_ref().map(AsRef::as_ref),
+            config.num_shards,
+            config.fast,
+            config.genesis.as_ref().map(AsRef::as_ref),
+            config.download,
+            config.download_genesis_url.as_ref().map(AsRef::as_ref),
+        ),
     }
 }

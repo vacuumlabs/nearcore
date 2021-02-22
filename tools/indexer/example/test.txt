@@ -1,0 +1,9 @@
+To run the indexer:
+`cd nearcore/tools/indexer/example`
+`cargo run --release -- --home-dir ~/.near/localnet/ run`
+Then, to submit a transaction, run this in another terminal window:
+`env NEAR_ENV=local near --keyPath ~/.near/localnet/validator_key.json create_account TEST_ACCOUNT_NAME.test.near --masterAccount test.near --initialBalance 100`
+Expect the indexer to let you know about your Tx happening with:
+`Feb 22 16:59:20.993  INFO indexer_example: #9407 Do8ywBbyDwd9ynBxXpPR2VbTJmFLPWmMsc24TDp9pr9V Chunks: 1, Transactions: 0, Receipts: 1, ExecutionOutcomes: 1, Logs: [["Test Log Message (inside Indexer)"], []]`
+
+My code is found in `nearcore/tools/indexer/example` under the comment "Test Logging"
