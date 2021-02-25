@@ -1,5 +1,11 @@
 use actix;
 
+// File IO Imports
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::{LineWriter, Write};
+use std::path::Path;
+
 use clap::Clap;
 use tokio::sync::mpsc;
 use tracing::info;
@@ -240,6 +246,7 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
         //     ]
         // }
         */
+
         /*
         pub struct StreamerMessage {
             pub block: views::BlockView,
@@ -247,13 +254,29 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
             pub state_changes: views::StateChangesView}
         */
 
+
+
         // Test Logging
+        /*
         let log_message = if streamer_message.chunks.len() > 0 {
             let chunk = &streamer_message.chunks[0];
             if chunk.receipt_execution_outcomes.len() > 0 {
                     let mut outcome = Vec::new();
                     outcome.push(vec!("Test Log Message (inside Indexer)".to_string()));
-                    for execution_outcome_with_receipt in chunk.receipt_execution_outcomes.iter() {
+
+                    // Log to File
+                    /*
+                        let path = Path::new("log.txt");
+                        let display = path.display();
+                        let mut buf: LineWriter<File> = LineWriter::new(File::create(path).unwrap());
+                        let obj = serde_json::to_string(format!(streamer_message)).unwrap();
+                        buf.write_all(obj.as_bytes());
+                    */
+                        let mut obj = format!("Debug message: \n {:?}",streamer_message);
+
+                    outcome.push(vec!(obj));
+
+                for execution_outcome_with_receipt in chunk.receipt_execution_outcomes.iter() {
                         outcome.push(execution_outcome_with_receipt.execution_outcome.outcome.logs.clone());
                     }
                     outcome
@@ -263,6 +286,79 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
         } else {
             vec!(vec!("Nothing to log. chunks.len() !> 0".to_string()))
         };
+        */
+
+        // Log EVM Message, if present.
+        let mut logs: Vec<Vec<String>> = Vec::new();
+        for chunk in streamer_message.chunks.iter() {
+            for outcome in chunk.receipt_execution_outcomes.iter() {
+                // TODO: Probably unwise to keep the logs as their own vectors
+                // necessary to investigate if fields other than log[0] are used
+                // in any of the functions we want to track
+                logs.push(outcome.execution_outcome.outcome.logs.clone()); // TODO: consider borrowing the value for efficiency reasons later
+            }
+        }
+
+        for log_vec in logs.iter() {
+            /*
+            03 // number of topics
+            8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 // keccak 256 hash of Approval(address,address,uint256)
+            000000000000000000000000cbda96b3f2b8eb962f97ae50c3852ca976740e2b // owner address (my address)
+            000000000000000000000000db9217df5c41887593e463cfa20036b62a4e331c // spender address (exchange proxy address)
+            ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff // amount (max uint256)
+            */
+
+            let item_size: i8 = 64;
+            let approval_event_hash = "8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+            let log: String = match log_vec.get(0) {
+                Some(c) => c.clone(),
+                None => String::from("")
+            }; // Once again, possibly unnecessary cloning, convert to borrowing
+            let num_topics: i8 = if log.len() > 0 {
+                match &log.as_str()[..2] {
+                    "01" => 1,
+                    "02" => 2,
+                    "03" => 3,
+                    _ => 0
+                }
+            } else {
+                0
+            };
+
+            // TBA: Loop
+            let function_hash: &str = if log.len() > 0 {
+                &log.as_str()[2..66]
+            } else {
+                "No Log"
+            };
+
+            let arg_1: &str = if log.len() > 0 {
+                &log.as_str()[66..130]
+            } else {
+               " "
+            };
+
+            let arg_2: &str = if log.len() > 0 {
+                &log.as_str()[130..194]
+            } else {
+                " "
+            };
+
+
+            let arg_3: &str = if log.len() > 0 {
+                &log.as_str()[194..258]
+            } else {
+                " "
+            };
+
+            let log_message = match function_hash {
+                "8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925" => format!("Event: Approval, Owner: {}, Spender: {}, Amount: {}", arg_1, arg_2, arg_3),
+                "No Log" => format!("Event: (Unknown), {}", function_hash),
+                _ => format!("Event: (Unknown) {}, arg_1: {}, arg_2: {}, arg_3: {}", function_hash, arg_1, arg_2, arg_3)
+            };
+
+
+        }
 
         info!(
             target: "indexer_example",
@@ -273,7 +369,7 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
             streamer_message.chunks.iter().map(|chunk| chunk.transactions.len()).sum::<usize>(),
             streamer_message.chunks.iter().map(|chunk| chunk.receipts.len()).sum::<usize>(),
             streamer_message.chunks.iter().map(|chunk| chunk.receipt_execution_outcomes.len()).sum::<usize>(),
-            log_message
+            logs
         );
     }
 }
