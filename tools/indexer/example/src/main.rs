@@ -299,6 +299,7 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
             }
         }
 
+        let mut log_message: String = String::new();
         for log_vec in logs.iter() {
             /*
             03 // number of topics
@@ -351,7 +352,7 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
                 " "
             };
 
-            let log_message = match function_hash {
+            log_message = match function_hash {
                 "8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925" => format!("Event: Approval, Owner: {}, Spender: {}, Amount: {}", arg_1, arg_2, arg_3),
                 "No Log" => format!("Event: (Unknown), {}", function_hash),
                 _ => format!("Event: (Unknown) {}, arg_1: {}, arg_2: {}, arg_3: {}", function_hash, arg_1, arg_2, arg_3)
@@ -369,7 +370,7 @@ async fn listen_blocks(mut stream: mpsc::Receiver<near_indexer::StreamerMessage>
             streamer_message.chunks.iter().map(|chunk| chunk.transactions.len()).sum::<usize>(),
             streamer_message.chunks.iter().map(|chunk| chunk.receipts.len()).sum::<usize>(),
             streamer_message.chunks.iter().map(|chunk| chunk.receipt_execution_outcomes.len()).sum::<usize>(),
-            logs
+            log_message
         );
     }
 }
