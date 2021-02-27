@@ -18,6 +18,7 @@ mod configs;
 fn assign_log(logs: &Vec<Vec<String>>) -> String {
     /*
     Example of log parsing
+    038c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925000000000000000000000000cbda96b3f2b8eb962f97ae50c3852ca976740e2b000000000000000000000000db9217df5c41887593e463cfa20036b62a4e331cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
     03 // number of topics
     8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 // keccak 256 hash of Approval(address,address,uint256)
     000000000000000000000000cbda96b3f2b8eb962f97ae50c3852ca976740e2b // owner address (my address)
@@ -25,38 +26,42 @@ fn assign_log(logs: &Vec<Vec<String>>) -> String {
     ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff // amount (max uint256)
     */
 
+    // Event name hashes
+    let approval_hash = "8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+    let log_new_pool_hash = "8ccec77b0cb63ac2cafd0f5de8cdfadab91ce656d262240ba8a6343bccc5f945";
+    let log_join_pool_hash = "63982df10efd8dfaaaa0fcc7f50b2d93b7cba26ccc48adee2873220d485dc39a";
+    let log_exit_pool_hash = "e74c91552b64c2e2e7bd255639e004e693bd3e1d01cc33e65610b86afcc1ffed";
+    let log_swap_hash = "908fb5ee8f16c6bc9bc3690973819f32a4d4b10188134543c88706e0e1d43378";
+    let transfer_hash = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    let ownership_transferred_hash = "8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0";
+
+    // Anonymous Event Hashes
+    let log_handleSetSwapFee_hash = "0x34e1990700000000000000000000000000000000000000000000000000000000";
+    let log_handleSetController_hash = "0x92eefe9b00000000000000000000000000000000000000000000000000000000";
+    let log_handleSetPublicSwap_hash = "0x49b5955200000000000000000000000000000000000000000000000000000000";
+    let log_handleFinalize_hash = "0x4bb278f300000000000000000000000000000000000000000000000000000000";
+    let log_handleRebind1_hash = "0x3fdddaa200000000000000000000000000000000000000000000000000000000";
+    let log_handleRebind2_hash = "0xe4e1e53800000000000000000000000000000000000000000000000000000000"; // why are there two?
+    let log_handleUnbind_hash = "0xcf5e7bd300000000000000000000000000000000000000000000000000000000";
+
+
     let mut log_message: String = String::new();
 
     for log_vec in logs.iter() {
-
-        // Event name hashes
-        let approval_hash = "8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
-        let log_new_pool_hash = "8ccec77b0cb63ac2cafd0f5de8cdfadab91ce656d262240ba8a6343bccc5f945";
-        let log_join_pool_hash = "63982df10efd8dfaaaa0fcc7f50b2d93b7cba26ccc48adee2873220d485dc39a";
-        let log_exit_pool_hash = "e74c91552b64c2e2e7bd255639e004e693bd3e1d01cc33e65610b86afcc1ffed";
-        let transfer_hash = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-
-
-
+        // Is there even a possibility for there to be more than one index in this vector?
         let log: String = match log_vec.get(0) {
             Some(c) => c.clone(),
             None => String::from("")
-        }; // Once again, possibly unnecessary cloning, convert to borrowing
+        }; // Possibly unnecessary cloning, convert to borrowing
 
         if log == String::from("") {
-            // TODO: More descriptive message.
-            return String::from("Nothing to log.");
+            return String::from("No logs for this transaction.");
         }
 
         let num_topics: i8 = if log.len() > 0 {
-            match &log.as_str()[..2] {
-                "01" => 1,
-                "02" => 2,
-                "03" => 3,
-                _ => 0
-            }
+            log.as_str()[..2].parse::<i8>().unwrap()
         } else {
-            0
+           0
         };
 
         let function_hash: &str = if log.len() > 65 {
@@ -66,33 +71,37 @@ fn assign_log(logs: &Vec<Vec<String>>) -> String {
             "No function hash"
         };
 
-        let arg_1: &str = if log.len() > 129 && num_topics > 0 {
-            &log.as_str()[66..130]
-        } else {
-            "None"
-        };
+        // TODO: Finish this!
+        let mut args: Vec<&str> = Vec::new();
+        for i in 1..=num_topics {
+            let f = 66 + (i as i32 - 1) * 64;
+            let t = 66 + i as i32 * 64;
 
-        let arg_2: &str = if log.len() > 193 && num_topics > 1 {
-            &log.as_str()[130..194]
-        } else {
-            "None"
-        };
+            if log.len() <= t as usize {
+                args.push("Missing arg");
+                continue;
+            }
 
-        let arg_3: &str = if log.len() > 257 && num_topics > 2 {
-            &log.as_str()[194..258]
-        } else {
-            "None"
-        };
+            args.push(&log.as_str()[f as usize..t as usize]);
+        }
 
-        // FIXME: Address substring possibly unsafe and could lead to panic if arg doesn't have index 24
         log_message = match function_hash {
-            s if s == approval_hash => format!("Event: Approval, Owner: {}, Spender: {}, Amount: {}", &arg_1[24..], &arg_2[24..], arg_3),
-            s if s == transfer_hash => format!("Event: Transfer, From: {}, To: {}, Amount: {}", &arg_1[24..], &arg_2[24..], arg_3),
-            s if s == log_new_pool_hash => format!("Event: LOG_NEW_POOL, Address 1: {}, Address 2: {}", &arg_1[24..], &arg_2[24..]),
-            s if s == log_join_pool_hash => format!("Event: LOG_JOIN, Address 1 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &arg_1[24..], &arg_2[24..], arg_3),
-            s if s == log_exit_pool_hash => format!("Event: LOG_EXIT, Address 2 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &arg_1[24..], &arg_2[24..], arg_3),
+            s if s == approval_hash => format!("Event: Approval, Owner: {}, Spender: {}, Amount: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == transfer_hash => format!("Event: Transfer, From: {}, To: {}, Amount: {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], &args.get(2).unwrap()),
+            s if s == log_new_pool_hash => format!("Event: LOG_NEW_POOL, Address 1: {}, Address 2: {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..]),
+            s if s == log_join_pool_hash => format!("Event: LOG_JOIN, Address 1 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], args.get(2).unwrap()),
+            s if s == log_exit_pool_hash => format!("Event: LOG_EXIT, Address 2 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], args.get(2).unwrap()),
+            s if s == log_swap_hash => format!("Event: LOG_SWAP, Address 1: {}, Address 2: {}, Address 3: {}, uint256 1 (Swap In?): {}, uint256 2 (Swap Out?): {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], &args.get(2).unwrap()[24..], args.get(3).unwrap(), args.get(4).unwrap()),
+            s if s == ownership_transferred_hash => format!("Event: OwnershipTransferred, Address 1: {}, Address 2: {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..]),
+            s if s == log_handleSetSwapFee_hash => format!("Event: handleSetSwapFee (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == log_handleSetController_hash => format!("Event: handleSetController (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == log_handleSetPublicSwap_hash => format!("Event: handleSetPublicSwap (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == log_handleFinalize_hash => format!("Event: handleFinalize (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == log_handleRebind1_hash => format!("Event: handleRebind (Anonymous), function hash: {} bytes4: {}, Address: {}, bytes: {}", function_hash, args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == log_handleRebind2_hash => format!("Event: handleRebind (Anonymous), function hash: {} bytes4: {}, Address: {}, bytes: {}", function_hash, args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == log_handleUnbind_hash => format!("Event: handleUnbind (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
             "No function hash" => format!("Event: (Unknown - No function hash), Raw log: {}", log),
-            _ => format!("Event: (Unknown) {}, arg_1: {}, arg_2: {}, arg_3: {}", function_hash, arg_1, arg_2, arg_3)
+            _ => format!("Event: (Unknown) {}, Num. Topics: {}, Args: {:?}", function_hash, num_topics, args)
         };
 
     }
