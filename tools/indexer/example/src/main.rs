@@ -14,6 +14,8 @@ use configs::{init_logging, Opts, SubCommand};
 use near_indexer;
 
 mod configs;
+mod database;
+mod addresses; // TODO: get rid of qualifiers with use crate::addresses::*
 
 fn assign_log(logs: &Vec<Vec<String>>) -> String {
     /*
@@ -25,25 +27,6 @@ fn assign_log(logs: &Vec<Vec<String>>) -> String {
     000000000000000000000000db9217df5c41887593e463cfa20036b62a4e331c // spender address (exchange proxy address)
     ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff // amount (max uint256)
     */
-
-    // Event name hashes
-    let approval_hash = "8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
-    let log_new_pool_hash = "8ccec77b0cb63ac2cafd0f5de8cdfadab91ce656d262240ba8a6343bccc5f945";
-    let log_join_pool_hash = "63982df10efd8dfaaaa0fcc7f50b2d93b7cba26ccc48adee2873220d485dc39a";
-    let log_exit_pool_hash = "e74c91552b64c2e2e7bd255639e004e693bd3e1d01cc33e65610b86afcc1ffed";
-    let log_swap_hash = "908fb5ee8f16c6bc9bc3690973819f32a4d4b10188134543c88706e0e1d43378";
-    let transfer_hash = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-    let ownership_transferred_hash = "8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0";
-
-    // Anonymous Event Hashes
-    let log_handleSetSwapFee_hash = "0x34e1990700000000000000000000000000000000000000000000000000000000";
-    let log_handleSetController_hash = "0x92eefe9b00000000000000000000000000000000000000000000000000000000";
-    let log_handleSetPublicSwap_hash = "0x49b5955200000000000000000000000000000000000000000000000000000000";
-    let log_handleFinalize_hash = "0x4bb278f300000000000000000000000000000000000000000000000000000000";
-    let log_handleRebind1_hash = "0x3fdddaa200000000000000000000000000000000000000000000000000000000";
-    let log_handleRebind2_hash = "0xe4e1e53800000000000000000000000000000000000000000000000000000000"; // why are there two?
-    let log_handleUnbind_hash = "0xcf5e7bd300000000000000000000000000000000000000000000000000000000";
-
 
     let mut log_message: String = String::new();
 
@@ -77,7 +60,7 @@ fn assign_log(logs: &Vec<Vec<String>>) -> String {
             let f = 66 + (i as i32 - 1) * 64;
             let t = 66 + i as i32 * 64;
 
-            if log.len() <= t as usize {
+            if log.len() < t as usize {
                 args.push("Missing arg");
                 continue;
             }
@@ -86,20 +69,20 @@ fn assign_log(logs: &Vec<Vec<String>>) -> String {
         }
 
         log_message = match function_hash {
-            s if s == approval_hash => format!("Event: Approval, Owner: {}, Spender: {}, Amount: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
-            s if s == transfer_hash => format!("Event: Transfer, From: {}, To: {}, Amount: {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], &args.get(2).unwrap()),
-            s if s == log_new_pool_hash => format!("Event: LOG_NEW_POOL, Address 1: {}, Address 2: {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..]),
-            s if s == log_join_pool_hash => format!("Event: LOG_JOIN, Address 1 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], args.get(2).unwrap()),
-            s if s == log_exit_pool_hash => format!("Event: LOG_EXIT, Address 2 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], args.get(2).unwrap()),
-            s if s == log_swap_hash => format!("Event: LOG_SWAP, Address 1: {}, Address 2: {}, Address 3: {}, uint256 1 (Swap In?): {}, uint256 2 (Swap Out?): {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..], &args.get(2).unwrap()[24..], args.get(3).unwrap(), args.get(4).unwrap()),
-            s if s == ownership_transferred_hash => format!("Event: OwnershipTransferred, Address 1: {}, Address 2: {}", &args.get(0).unwrap()[24..], &args.get(1).unwrap()[24..]),
-            s if s == log_handleSetSwapFee_hash => format!("Event: handleSetSwapFee (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
-            s if s == log_handleSetController_hash => format!("Event: handleSetController (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
-            s if s == log_handleSetPublicSwap_hash => format!("Event: handleSetPublicSwap (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
-            s if s == log_handleFinalize_hash => format!("Event: handleFinalize (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
-            s if s == log_handleRebind1_hash => format!("Event: handleRebind (Anonymous), function hash: {} bytes4: {}, Address: {}, bytes: {}", function_hash, args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
-            s if s == log_handleRebind2_hash => format!("Event: handleRebind (Anonymous), function hash: {} bytes4: {}, Address: {}, bytes: {}", function_hash, args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
-            s if s == log_handleUnbind_hash => format!("Event: handleUnbind (Anonymous), bytes4: {}, Address: {}, bytes: {}", args.get(0).unwrap(), args.get(1).unwrap(), args.get(2).unwrap()),
+            s if s == addresses::APPROVAL_HASH => format!("Event: Approval, Owner: {}, Spender: {}, Amount: {}", args.get(0).unwrap_or(&"No arg provided."), args.get(1).unwrap_or(&"No arg provided."), args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::TRANSFER_HASH => format!("Event: Transfer, From: {}, To: {}, Amount: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_NEW_POOL_HASH => format!("Event: LOG_NEW_POOL, Address 1: {}, Address 2: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_JOIN_POOL_HASH => format!("Event: LOG_JOIN, Address 1 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_EXIT_POOL_HASH => format!("Event: LOG_EXIT, Address 2 (Sender?): {}, Address 2 (Pool?): {}, Amount(?): {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_SWAP_HASH => format!("Event: LOG_SWAP, Address 1: {}, Address 2: {}, Address 3: {}, uint256 1 (Swap In?): {}, uint256 2 (Swap Out?): {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided."), args.get(3).unwrap_or(&"No arg provided."), args.get(4).unwrap_or(&"No arg provided.")),
+            s if s == addresses::OWNERSHIP_TRANSFERRED_HASH => format!("Event: OwnershipTransferred, Address 1: {}, Address 2: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_HANDLE_SET_SWAP_FEE_HASH => format!("Event: handleSetSwapFee (Anonymous), bytes4: {}, Address: {}, bytes: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_HANDLE_SET_CONTROLLER_HASH => format!("Event: handleSetController (Anonymous), bytes4: {}, Address: {}, bytes: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_HANDLE_SET_PUBLIC_SWAP_HASH => format!("Event: handleSetPublicSwap (Anonymous), bytes4: {}, Address: {}, bytes: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_HANDLE_FINALIZE_HASH => format!("Event: handleFinalize (Anonymous), bytes4: {}, Address: {}, bytes: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_HANDLE_REBIND1_HASH => format!("Event: handleRebind (Anonymous), function hash: {} bytes4: {}, Address: {}, bytes: {}", function_hash, &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_HANDLE_REBIND2_HASH => format!("Event: handleRebind (Anonymous), function hash: {} bytes4: {}, Address: {}, bytes: {}", function_hash, &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
+            s if s == addresses::LOG_HANDLE_UNBIND_HASH => format!("Event: handleUnbind (Anonymous), bytes4: {}, Address: {}, bytes: {}", &args.get(0).unwrap_or(&"No arg provided."), &args.get(1).unwrap_or(&"No arg provided."), &args.get(2).unwrap_or(&"No arg provided.")),
             "No function hash" => format!("Event: (Unknown - No function hash), Raw log: {}", log),
             _ => format!("Event: (Unknown) {}, Num. Topics: {}, Args: {:?}", function_hash, num_topics, args)
         };
